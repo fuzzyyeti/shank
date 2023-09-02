@@ -16,8 +16,6 @@ fn instruction_from_single_file_no_args() {
         .expect("Parsing should not fail")
         .expect("File contains IDL");
 
-    // eprintln!("{}", idl.try_into_json().unwrap());
-
     let expected_idl: Idl = serde_json::from_str(include_str!(
         "./fixtures/instructions/single_file/instruction_no_args.json"
     ))

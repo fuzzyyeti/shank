@@ -12,6 +12,7 @@ use crate::{
     types::RustType,
     DERIVE_INSTRUCTION_ATTR,
 };
+use crate::instruction::discriminant_attrs::InstructionDiscriminant;
 
 use super::{
     account_attrs::{InstructionAccount, InstructionAccounts},
@@ -91,7 +92,7 @@ pub struct InstructionVariant {
     pub field_tys: InstructionVariantFields,
     pub accounts: Vec<InstructionAccount>,
     pub strategies: HashSet<InstructionStrategy>,
-    pub discriminant: usize,
+    pub discriminant: InstructionDiscriminant,
 }
 
 impl TryFrom<&ParsedEnumVariant> for InstructionVariant {
@@ -105,6 +106,7 @@ impl TryFrom<&ParsedEnumVariant> for InstructionVariant {
             attrs,
             ..
         } = variant;
+
 
         let field_tys: InstructionVariantFields = if !fields.is_empty() {
             // Determine if the InstructionType is tuple or struct variant
@@ -132,13 +134,24 @@ impl TryFrom<&ParsedEnumVariant> for InstructionVariant {
         let attrs: &[Attribute] = attrs.as_ref();
         let accounts: InstructionAccounts = attrs.try_into()?;
         let strategies: InstructionStrategies = attrs.into();
+        let explicit_descriminant: InstructionDiscriminant = attrs.try_into()?;
+        let mut final_descriminant = InstructionDiscriminant::None;
+
+        match explicit_descriminant {
+            InstructionDiscriminant::None => {
+                final_descriminant = InstructionDiscriminant::IncrementDiscriminant { discriminant: *discriminant as u8 }
+            }
+            _ => {
+                final_descriminant = explicit_descriminant
+            }
+        }
 
         Ok(Self {
             ident: ident.clone(),
             field_tys,
             accounts: accounts.0,
             strategies: strategies.0,
-            discriminant: *discriminant,
+            discriminant: final_descriminant
         })
     }
 }

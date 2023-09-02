@@ -1,14 +1,13 @@
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 
 use anyhow::{anyhow, ensure, Error, Result};
 use heck::MixedCase;
 use serde::{Deserialize, Serialize};
-use shank_macro_impl::instruction::{
-    Instruction, InstructionAccount, InstructionStrategy, InstructionVariant,
-    InstructionVariantFields,
-};
+use serde_json::Value;
+use shank_macro_impl::instruction::{Instruction, InstructionAccount, InstructionDiscriminant, InstructionStrategy, InstructionVariant, InstructionVariantFields};
 
 use crate::{idl_field::IdlField, idl_type::IdlType};
+use crate::idl_type::IdlType::U8;
 
 // -----------------
 // IdlInstructions
@@ -106,43 +105,109 @@ impl TryFrom<InstructionVariant> for IdlInstruction {
             None
         };
 
-        ensure!(
-            discriminant < u8::MAX as usize,
-            anyhow!(
-                "Instruction variant discriminants have to be <= u8::MAX ({}), \
-                    but the discriminant of variant '{}' is {}",
-                u8::MAX,
-                ident,
-                discriminant
-            )
-        );
+        let mut discriminant_value = IdlInstructionDiscriminantValue::from_u8(0);
+
+        match discriminant {
+            InstructionDiscriminant::None => {
+                return Err(anyhow!("Instruction variant '{}' is missing a discriminant", ident))
+            }
+            InstructionDiscriminant::IncrementDiscriminant { discriminant } => {
+                ensure!(
+                    discriminant < u8::MAX,
+                    anyhow!(
+                        "Instruction variant discriminants have to be <= u8::MAX ({}), \
+                            but the discriminant of variant '{}' is {}",
+                        u8::MAX,
+                        ident,
+                        discriminant
+                    )
+                );
+                discriminant_value = IdlInstructionDiscriminantValue::from_u8(discriminant as u8);
+            }
+            InstructionDiscriminant::ArrayDiscriminant { discriminant } => {
+                ensure!(
+                    discriminant.len() == 8,
+                    anyhow!(
+                        "Instruction variant discriminants have to be 8 u8s, \
+                            but the discriminant of variant '{}' is {:?}",
+                        ident,
+                        discriminant
+                    )
+                );
+                discriminant_value = IdlInstructionDiscriminantValue::from_vec(discriminant);
+            }
+        }
 
         Ok(Self {
             name,
             accounts,
             args,
             legacy_optional_accounts_strategy,
-            discriminant: (discriminant as u8).into(),
+            discriminant: discriminant_value.into()
         })
     }
 }
 
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct IdlInstructionDiscriminantValue(Value);
+
+impl IdlInstructionDiscriminantValue {
+    pub fn from_u8(value: u8) -> Self {
+        IdlInstructionDiscriminantValue(Value::Number(value.into()))
+    }
+
+    pub fn from_vec(vec: Vec<u8>) -> Self {
+        IdlInstructionDiscriminantValue(Value::Array(vec.into_iter().map(Value::from).collect()))
+    }
+
+    pub fn as_u8(&self) -> Option<u8> {
+        self.0.as_u64().and_then(|v| v.try_into().ok())
+    }
+
+    pub fn as_vec(&self) -> Option<&Vec<Value>> {
+        self.0.as_array()
+    }
+}
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct IdlInstructionDiscriminant {
     #[serde(rename = "type")]
     pub ty: IdlType,
-    pub value: u8,
+    pub value: IdlInstructionDiscriminantValue,
+}
+
+impl From<IdlInstructionDiscriminantValue> for IdlInstructionDiscriminant {
+    fn from(value: IdlInstructionDiscriminantValue) -> Self {
+        match value.as_u8() {
+            Some(v) => Self {
+                ty: IdlType::U8,
+                value
+            },
+            None => Self {
+                ty: IdlType::Vec(Box::new(IdlType::U8)),
+                value
+            },
+        }
+    }
 }
 
 impl From<u8> for IdlInstructionDiscriminant {
     fn from(value: u8) -> Self {
         Self {
             ty: IdlType::U8,
-            value,
+            value: IdlInstructionDiscriminantValue::from_u8(value),
         }
     }
 }
 
+impl From<Vec<u8>> for IdlInstructionDiscriminant {
+    fn from(value: Vec<u8>) -> Self {
+        Self {
+            ty: IdlType::Vec(Box::new(IdlType::U8)),
+            value: IdlInstructionDiscriminantValue::from_vec(value),
+        }
+    }
+}
 // -----------------
 // IdlAccounts
 // -----------------
