@@ -2,6 +2,7 @@ use std::{
     collections::HashSet,
     convert::{TryFrom, TryInto},
 };
+use proc_macro2::Span;
 use syn::{Attribute, Error as ParseError, ItemEnum, Result as ParseResult};
 
 use syn::Ident;
@@ -35,7 +36,7 @@ impl Instruction {
     ) -> ParseResult<Option<Instruction>> {
         if skip_derive_attr_check
             || get_derive_attr(&item_enum.attrs, DERIVE_INSTRUCTION_ATTR)
-                .is_some()
+            .is_some()
         {
             let parsed_enum = ParsedEnum::try_from(item_enum)?;
             Instruction::try_from(&parsed_enum).map(Some)
@@ -131,14 +132,23 @@ impl TryFrom<&ParsedEnumVariant> for InstructionVariant {
             InstructionVariantFields::Unnamed(vec![])
         };
 
-        let attrs: &[Attribute] = attrs.as_ref();
-        let accounts: InstructionAccounts = attrs.try_into()?;
-        let strategies: InstructionStrategies = attrs.into();
-        let explicit_descriminant: InstructionDiscriminant = attrs.try_into()?;
-        let mut final_descriminant = InstructionDiscriminant::None;
+        let attrs_ref: &[Attribute] = attrs.as_ref();
+        let accounts: InstructionAccounts = attrs_ref.try_into()?;
+        let strategies: InstructionStrategies = attrs_ref.into();
+        let explicit_descriminant: InstructionDiscriminant = attrs_ref.try_into()?;
+        let final_descriminant;
 
         match explicit_descriminant {
             InstructionDiscriminant::None => {
+                if *discriminant >= u8::MAX as usize {
+                    return Err(syn::Error::new(
+                        Span::call_site(),
+                        format!("Instruction variant discriminants have to be <= u8::MAX ({}), \
+                        but the discriminant of variant '{}' is {}",
+                                u8::MAX,
+                                ident,
+                                discriminant)));
+                }
                 final_descriminant = InstructionDiscriminant::IncrementDiscriminant { discriminant: *discriminant as u8 }
             }
             _ => {
@@ -151,7 +161,7 @@ impl TryFrom<&ParsedEnumVariant> for InstructionVariant {
             field_tys,
             accounts: accounts.0,
             strategies: strategies.0,
-            discriminant: final_descriminant
+            discriminant: final_descriminant,
         })
     }
 }

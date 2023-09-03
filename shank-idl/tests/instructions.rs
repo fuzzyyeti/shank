@@ -129,11 +129,26 @@ fn instruction_from_single_file_invalid_discriminant() {
         .join("instruction_invalid_discriminant.rs");
     let res = parse_file(&file, &ParseIdlConfig::optional_program_address());
 
-    let err = res.unwrap_err().to_string();
+    let err = format!("{:?}", res.unwrap_err());
     assert!(err.contains("discriminants have to be <= u8::MAX"));
     assert!(err.contains("discriminant of variant 'CreateThing' is 256"));
 }
 
+#[test]
+fn instruction_with_explicit_discriminants() {
+    let file = fixtures_dir()
+        .join("single_file")
+        .join("instruction_with_explicit_discriminants.rs");
+    let idl = parse_file(&file, &ParseIdlConfig::optional_program_address())
+        .expect("Parsing should not fail")
+        .expect("File contains IDL");
+
+    let expected_idl: Idl = serde_json::from_str(include_str!(
+        "./fixtures/instructions/single_file/instruction_with_explicit_discriminants.json"
+    ))
+        .unwrap();
+    assert_eq!(idl, expected_idl);
+}
 #[test]
 fn instruction_from_single_file_with_optional_signer_account() {
     let file = fixtures_dir()

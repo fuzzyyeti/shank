@@ -1,0 +1,40 @@
+{
+  "version": "",
+  "name": "",
+  "instructions": [
+    {
+      "name": "CreateThing",
+      "accounts": [
+        {
+          "name": "creator",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "thing",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [],
+      "discriminant": { "type": "u8", "value": 10 }
+    },
+    {
+      "name": "CloseThing",
+      "accounts": [
+        {
+          "name": "originalCreator",
+          "isMut": false,
+          "isSigner": true
+        }
+      ],
+      "args": [],
+      "discriminant": { "type":
+      {"array" :  ["u8", 8]},
+        "value": [10,20,30,40,50,60,70,80] }
+    }
+  ],
+  "metadata": {
+    "origin": "shank"
+  }
+}

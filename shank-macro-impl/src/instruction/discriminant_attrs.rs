@@ -1,10 +1,8 @@
 use std::convert::TryFrom;
-use std::fmt::Error;
 
-use proc_macro2::Span;
 use syn::{
-    punctuated::Punctuated, Attribute, Error as ParseError, Ident, Lit, Meta,
-    MetaList, MetaNameValue, NestedMeta, Result as ParseResult, Token,
+    Attribute, Error as ParseError, Lit, Meta,
+    MetaList, NestedMeta, Result as ParseResult,
 };
 
 const IX_DISCRIMINANT : &str = "discriminant";
@@ -34,7 +32,6 @@ impl InstructionDiscriminant {
     ) -> ParseResult<InstructionDiscriminant> {
         let meta = &attr.parse_meta()?;
 
-        let mut index: Option<u8> = None;
         match meta {
             Meta::List(MetaList { nested, .. }) => {
 

@@ -6,6 +6,7 @@ use crate::{
     instruction::InstructionVariantFields,
     types::{Primitive, RustType},
 };
+use crate::instruction::InstructionDiscriminant;
 
 use super::instruction::{Instruction, InstructionVariant};
 
@@ -30,8 +31,9 @@ fn assert_instruction_variant(
         ..
     } = variant;
 
+    let expected_discriminant_value = InstructionDiscriminant::IncrementDiscriminant { discriminant: expected_discriminant as u8 };
     assert_eq!(ident.to_string(), name);
-    assert_eq!(discriminant, &expected_discriminant, "discriminant");
+    assert_eq!(discriminant, &expected_discriminant_value, "discriminant");
     assert_eq!(accounts.len(), accounts_len, "accounts");
     match field_tys {
         InstructionVariantFields::Named(field_tys) => {

@@ -7,7 +7,6 @@ use serde_json::Value;
 use shank_macro_impl::instruction::{Instruction, InstructionAccount, InstructionDiscriminant, InstructionStrategy, InstructionVariant, InstructionVariantFields};
 
 use crate::{idl_field::IdlField, idl_type::IdlType};
-use crate::idl_type::IdlType::U8;
 
 // -----------------
 // IdlInstructions
@@ -105,8 +104,7 @@ impl TryFrom<InstructionVariant> for IdlInstruction {
             None
         };
 
-        let mut discriminant_value = IdlInstructionDiscriminantValue::from_u8(0);
-
+        let discriminant_value;
         match discriminant {
             InstructionDiscriminant::None => {
                 return Err(anyhow!("Instruction variant '{}' is missing a discriminant", ident))
@@ -179,12 +177,12 @@ pub struct IdlInstructionDiscriminant {
 impl From<IdlInstructionDiscriminantValue> for IdlInstructionDiscriminant {
     fn from(value: IdlInstructionDiscriminantValue) -> Self {
         match value.as_u8() {
-            Some(v) => Self {
+            Some(_) => Self {
                 ty: IdlType::U8,
                 value
             },
             None => Self {
-                ty: IdlType::Vec(Box::new(IdlType::U8)),
+                ty: IdlType::Array(Box::new(IdlType::U8), 8),
                 value
             },
         }
