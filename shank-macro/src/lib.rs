@@ -178,7 +178,7 @@ pub fn shank_account(input: TokenStream) -> TokenStream {
 /// ```
 #[proc_macro_derive(
     ShankInstruction,
-    attributes(account, legacy_optional_accounts_strategy)
+    attributes(account, discriminant, legacy_optional_accounts_strategy)
 )]
 pub fn shank_instruction(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
